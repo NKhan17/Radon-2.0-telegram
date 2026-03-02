@@ -7,18 +7,21 @@
 3. [Prerequisites](#prerequisites)
 4. [Getting a Telegram Bot Token](#getting-a-telegram-bot-token)
 5. [Setting Up MongoDB](#setting-up-mongodb)
-6. [Local Setup](#local-setup)
-7. [Configuration](#configuration)
-8. [Running the Bot](#running-the-bot)
-9. [Deployment](#deployment)
-10. [Command Reference](#command-reference)
-11. [Troubleshooting](#troubleshooting)
+6. [Deploy to Vercel (Recommended)](#deploy-to-vercel-recommended)
+7. [Run Locally (Polling Mode)](#run-locally-polling-mode)
+8. [Other Deployment Options](#other-deployment-options)
+9. [Command Reference](#command-reference)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Project Overview
 
 Radon 2.0 Telegram Edition is a fitness-focused community bot originally built for Discord using nextcord. This version has been fully migrated to Telegram using the python-telegram-bot library while maintaining all original features.
+
+The bot supports **two deployment modes**:
+- **Vercel (webhook mode)** - Serverless, zero infrastructure, always on. Telegram pushes updates to your Vercel function.
+- **Local/VPS (polling mode)** - Traditional long-running process that polls Telegram for updates.
 
 The bot includes:
 - A rank-based workout system (Beginner -> Intermediate -> Hard)
@@ -49,10 +52,10 @@ The bot includes:
 
 ## Prerequisites
 
-- **Python 3.10+** (3.11 recommended)
-- **pip** (Python package manager)
 - A **Telegram account**
-- A **MongoDB database** (local or cloud - MongoDB Atlas free tier works)
+- A **MongoDB database** (MongoDB Atlas free tier works)
+- For Vercel: A **GitHub account** and **Vercel account** (both free)
+- For local: **Python 3.10+** and **pip**
 
 ---
 
@@ -65,7 +68,7 @@ The bot includes:
    - Enter a **display name** for your bot (e.g., "Radon 2.0")
    - Enter a **username** for your bot (must end in "bot", e.g., "radon2_bot")
 5. BotFather will give you a **token** that looks like: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`
-6. **Save this token** - you'll need it for the `.env` file
+6. **Save this token** - you'll need it for deployment
 
 ### Important Bot Settings (via BotFather)
 
@@ -77,25 +80,122 @@ After creating your bot, send these commands to BotFather:
 
 ## Setting Up MongoDB
 
-### Option A: MongoDB Atlas (Cloud - Recommended)
+### MongoDB Atlas (Cloud - Recommended)
 
 1. Go to https://www.mongodb.com/atlas and create a free account
-2. Create a **free shared cluster**
+2. Create a **free shared cluster** (M0 tier is free forever)
 3. Under **Database Access**, create a database user with a password
-4. Under **Network Access**, add your IP (or `0.0.0.0/0` to allow all)
+4. Under **Network Access**, add `0.0.0.0/0` (allow access from anywhere - needed for Vercel)
 5. Click **Connect** on your cluster -> **Drivers** -> Copy the connection string
 6. It will look like: `mongodb+srv://username:password@cluster.xxxxx.mongodb.net/?retryWrites=true&w=majority`
 7. Replace `<password>` with your actual database user password
 
-### Option B: Local MongoDB
-
-1. Install MongoDB Community Edition: https://www.mongodb.com/try/download/community
-2. Start the MongoDB service
-3. Your connection string will be: `mongodb://localhost:27017`
+**Important for Vercel:** You must allow access from all IPs (`0.0.0.0/0`) because Vercel serverless functions use dynamic IPs.
 
 ---
 
-## Local Setup
+## Deploy to Vercel (Recommended)
+
+This is the easiest way to get the bot running 24/7 with zero infrastructure costs.
+
+### How it Works
+
+Unlike the local polling mode where the bot continuously asks Telegram "any new messages?", Vercel uses **webhooks**: Telegram sends a POST request to your Vercel URL whenever someone sends a message. Your serverless function wakes up, processes the message, and goes back to sleep. This means:
+
+- No server to maintain
+- No process to keep alive
+- Free tier handles thousands of messages/day
+- Automatic HTTPS (required by Telegram)
+- ConversationHandler state is persisted to MongoDB (survives cold starts)
+
+### Step-by-Step
+
+#### 1. Fork the Repository
+
+Go to https://github.com/NKhan17/Radon-2.0-telegram and click **Fork** (top right).
+
+#### 2. Create a Vercel Account
+
+Go to https://vercel.com and sign up with your GitHub account (free).
+
+#### 3. Import the Project
+
+1. In Vercel dashboard, click **"Add New..." -> "Project"**
+2. Select your forked repository
+3. Vercel will auto-detect the `vercel.json` configuration
+4. **Before clicking Deploy**, add your environment variables:
+
+#### 4. Add Environment Variables
+
+In the Vercel project settings (or during import), add:
+
+| Key | Value |
+|-----|-------|
+| `BOT_TOKEN` | Your bot token from @BotFather |
+| `MONGO_URI` | Your MongoDB Atlas connection string |
+
+Click **Deploy**.
+
+#### 5. Register the Webhook
+
+After deployment completes, Vercel gives you a URL like `https://your-project.vercel.app`.
+
+**Open this URL in your browser:**
+
+```
+https://your-project.vercel.app/api/set_webhook
+```
+
+You should see a JSON response like:
+```json
+{
+  "ok": true,
+  "webhook_url": "https://your-project.vercel.app/api/webhook",
+  "pending_update_count": 0
+}
+```
+
+This tells Telegram to send all bot updates to your Vercel function.
+
+#### 6. Test the Bot
+
+Open Telegram, find your bot, and send `/start`. It should respond.
+
+#### 7. Verify Everything
+
+You can check webhook status anytime:
+```
+https://your-project.vercel.app/api/set_webhook?action=info
+```
+
+### Webhook Management
+
+| URL | Action |
+|-----|--------|
+| `/api/set_webhook` | Register/update the webhook |
+| `/api/set_webhook?action=info` | Check current webhook status |
+| `/api/set_webhook?action=delete` | Remove webhook (for switching to polling mode) |
+| `/api/webhook` | The actual webhook endpoint (Telegram POSTs here) |
+
+### Using a Custom Domain
+
+If you add a custom domain in Vercel, set the `WEBHOOK_URL` environment variable:
+
+```
+WEBHOOK_URL=https://your-custom-domain.com
+```
+
+Then visit `/api/set_webhook` again to re-register with the new URL.
+
+### Updating the Bot
+
+Push changes to your GitHub repo. Vercel auto-deploys on every push. The webhook URL stays the same.
+
+---
+
+## Run Locally (Polling Mode)
+
+For development or self-hosted deployment.
 
 ### Step 1: Clone the Repository
 
@@ -130,29 +230,22 @@ cp .env.example .env    # macOS/Linux
 copy .env.example .env  # Windows
 ```
 
-Edit the `.env` file with your values:
+Edit the `.env` file:
 
 ```env
 BOT_TOKEN=your_telegram_bot_token_here
 MONGO_URI=your_mongodb_connection_string_here
 ```
 
----
+### Step 5: Remove Webhook (if previously set)
 
-## Configuration
+If you previously deployed on Vercel, delete the webhook first so polling mode works:
 
-The bot uses two environment variables:
+```bash
+curl "https://api.telegram.org/botYOUR_TOKEN/deleteWebhook"
+```
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `BOT_TOKEN` | Yes | Your Telegram bot token from @BotFather |
-| `MONGO_URI` | Yes | MongoDB connection string |
-
-The bot validates these on startup and will exit with a clear message if any are missing.
-
----
-
-## Running the Bot
+### Step 6: Run
 
 ```bash
 python main.py
@@ -161,7 +254,7 @@ python main.py
 You should see:
 ```
 INFO - Bot commands registered with Telegram.
-INFO - Radon 2.0 Telegram Edition is online!
+INFO - Radon 2.0 Telegram Edition is online! (polling mode)
 INFO - Starting Radon 2.0 polling...
 ```
 
@@ -174,53 +267,43 @@ INFO - Starting Radon 2.0 polling...
 
 ---
 
-## Deployment
+## Other Deployment Options
 
 ### Docker
 
 ```bash
-# Build
 docker build -t radon-telegram .
-
-# Run
 docker run -d --env-file .env --name radon-bot radon-telegram
 ```
 
 ### Railway
 
-1. Fork/push this repo to your GitHub
+1. Fork the repo to your GitHub
 2. Go to https://railway.app and create a new project
 3. Select "Deploy from GitHub repo"
 4. Add environment variables (`BOT_TOKEN`, `MONGO_URI`) in the Variables tab
-5. Railway will auto-detect the Dockerfile and deploy
+5. Railway auto-detects the Dockerfile
 
 ### Render
 
 1. Go to https://render.com and create a new **Background Worker**
 2. Connect your GitHub repo
-3. Set:
-   - **Runtime:** Docker
-   - **Environment Variables:** `BOT_TOKEN`, `MONGO_URI`
-4. Deploy
+3. Set Runtime to Docker, add `BOT_TOKEN` and `MONGO_URI` as env vars
 
 ### VPS (Ubuntu/Debian)
 
 ```bash
-# Install Python
 sudo apt update && sudo apt install python3 python3-pip python3-venv -y
 
-# Clone and setup
 git clone https://github.com/NKhan17/Radon-2.0-telegram.git
 cd Radon-2.0-telegram
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-
-# Configure
 cp .env.example .env
 nano .env  # Add your secrets
 
-# Run with systemd (persistent)
+# Run as a systemd service for persistence:
 sudo tee /etc/systemd/system/radon-bot.service > /dev/null <<EOF
 [Unit]
 Description=Radon 2.0 Telegram Bot
@@ -242,12 +325,9 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable radon-bot
 sudo systemctl start radon-bot
-sudo systemctl status radon-bot
 ```
 
 ### Heroku
-
-The included `Procfile` supports Heroku deployment:
 
 ```bash
 heroku create your-bot-name
@@ -262,14 +342,12 @@ heroku ps:scale worker=1
 
 ### Workout Commands
 
-**`/schedule`**
-View the weekly training split.
+**`/schedule`** - View the weekly training split.
 ```
 /schedule
 ```
 
-**`/startworkout`**
-Start your personalized workout based on your rank and the current day.
+**`/startworkout`** - Start your personalized workout based on your rank and the current day.
 ```
 /startworkout
 ```
@@ -280,26 +358,23 @@ Then select "Gym" or "Calisthenics" from the buttons. After completing the routi
 - Intermediate: 10-29 completed workouts
 - Hard: 30+ completed workouts
 
-**`/myworkout`**
-View and manage your custom exercise list.
+**`/myworkout`** - View and manage your custom exercise list.
 ```
 /myworkout
 ```
-Use the inline buttons to Add, Delete, or Clear exercises. Navigate pages with Prev/Next.
+Use the inline buttons to Add, Delete, or Clear exercises.
 
 ### Nutrition
 
-**`/diet`**
-Browse the nutritional food database.
+**`/diet`** - Browse the nutritional food database.
 ```
 /diet
 ```
-Sort by protein or calories using the buttons. Navigate with Prev/Next.
+Sort by protein or calories using the buttons. Navigate pages with Prev/Next.
 
 ### Progress
 
-**`/flex`**
-View and manage your progress log.
+**`/flex`** - View and manage your progress log.
 ```
 /flex
 ```
@@ -307,89 +382,30 @@ Use Add to log a new achievement, Delete to remove entries, Clear All to reset.
 
 ### Fun Commands
 
-**`/rps`**
-Play Rock Paper Scissors against Radon.
 ```
-/rps
-```
-
-**`/meme`**
-Get a random meme.
-```
-/meme
-```
-
-**`/eightball`**
-Ask the magic 8-ball a question.
-```
-/eightball Will I ever bench 225?
-```
-
-**`/dadjoke`**
-Get a random dad joke.
-```
-/dadjoke
-```
-
-**`/hype`**
-Get the official Radon workout playlist.
-```
-/hype
+/rps          - Rock Paper Scissors
+/meme         - Random meme
+/eightball    - Magic 8-ball (add your question after the command)
+/dadjoke      - Dad joke
+/hype         - Workout playlist link
 ```
 
 ### Tags
 
-**`/tag create <name> <content>`**
-Create a new tag for this chat.
 ```
-/tag create rules No skipping leg day!
-```
-
-**`/tag get <name>`**
-View a tag's content.
-```
-/tag get rules
-```
-
-**`/tag delete <name>`**
-Delete a tag (creator or admin only).
-```
-/tag delete rules
-```
-
-**`/tag list`**
-List all tags in this chat.
-```
-/tag list
+/tag create <name> <content>  - Create a tag
+/tag get <name>               - View a tag
+/tag delete <name>            - Delete a tag (creator/admin)
+/tag list                     - List all tags
 ```
 
 ### Moderation (Admin Only)
 
-**`/purge <count>`**
-Delete recent messages (up to 100, max 48h old).
 ```
-/purge 10
-```
-
-**`/kick`**
-Kick a user. Reply to their message or provide a user ID.
-```
-/kick               (reply to a message)
-/kick 123456789     (by user ID)
-/kick 123456789 Spamming
-```
-
-**`/ban`**
-Ban a user. Reply to their message or provide a user ID.
-```
-/ban                (reply to a message)
-/ban 123456789 Toxic behavior
-```
-
-**`/unban <user_id>`**
-Unban a user by their numeric Telegram ID.
-```
-/unban 123456789
+/purge <count>    - Delete recent messages (1-100)
+/kick             - Kick (reply to message or: /kick <user_id> [reason])
+/ban              - Ban  (reply to message or: /ban <user_id> [reason])
+/unban <user_id>  - Unban by numeric user ID
 ```
 
 ---
@@ -397,9 +413,21 @@ Unban a user by their numeric Telegram ID.
 ## Troubleshooting
 
 ### Bot doesn't respond to commands
-- Make sure `BOT_TOKEN` is correct in `.env`
-- Check that the bot is running (`python main.py` should show "online" message)
-- In groups, make sure you're using the command with the bot's username: `/command@yourbotname`
+- **Vercel:** Check that the webhook is registered (visit `/api/set_webhook?action=info`)
+- **Local:** Check that `python main.py` is running and showing "online"
+- Make sure `BOT_TOKEN` is correct
+- In groups, try `/command@yourbotname`
+
+### Vercel: Bot responds slowly on first message
+This is a **cold start** - the serverless function hasn't been called recently. First response may take 1-3 seconds. Subsequent responses are fast (~100-200ms).
+
+### Vercel: ConversationHandler state lost
+If mid-conversation state (like adding an exercise) seems lost, the MongoDB persistence should handle this automatically. Check that `MONGO_URI` is valid and the `GymBotDB.bot_persistence` collection is accessible.
+
+### Vercel: Webhook registration fails
+- Check that `BOT_TOKEN` is set in Vercel environment variables
+- Make sure there are no typos in the token
+- Try visiting `/api/set_webhook?action=delete` first, then `/api/set_webhook` again
 
 ### Bot can't kick/ban/purge
 - The bot must be an **admin** in the group
@@ -409,18 +437,18 @@ Unban a user by their numeric Telegram ID.
 
 ### MongoDB connection errors
 - Check your `MONGO_URI` is correct
-- If using Atlas: make sure your IP is in the Network Access whitelist
-- If using Atlas: make sure the database user password is correct (no special characters that need URL encoding)
+- If using Atlas: make sure Network Access allows `0.0.0.0/0` (required for Vercel)
+- Make sure the database user password has no special characters that need URL encoding
 
 ### "Missing required environment variables" error
-- Copy `.env.example` to `.env`: `cp .env.example .env`
-- Fill in both `BOT_TOKEN` and `MONGO_URI`
+- **Vercel:** Add `BOT_TOKEN` and `MONGO_URI` in project Settings -> Environment Variables, then redeploy
+- **Local:** Copy `.env.example` to `.env` and fill in the values
 
 ### Multi-step inputs (Add/Delete) not working
 - Type `/cancel` to exit any stuck conversation
 - Make sure you're replying with plain text (not commands) when the bot asks for input
 
-### Bot works in private chat but not in groups
-- Add the bot to the group
-- Make the bot an admin
-- Disable privacy mode via BotFather (`/setprivacy`)
+### Switching between Vercel and local mode
+- **To use local after Vercel:** Delete the webhook first: visit `/api/set_webhook?action=delete` or run `curl "https://api.telegram.org/botYOUR_TOKEN/deleteWebhook"`
+- **To use Vercel after local:** Stop the local process and register the webhook: visit `/api/set_webhook`
+- You cannot run both modes simultaneously for the same bot token.

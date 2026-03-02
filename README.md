@@ -13,20 +13,36 @@ A full-featured Telegram bot migrated from the [Radon 2.0 Discord bot](https://g
 - **Tags** - Per-chat tag system for saving and sharing content
 - **Workout Playlist** - Official hype playlist link
 
-## Quick Start
+## Deploy to Vercel (Recommended)
 
-1. Copy `.env.example` to `.env` and fill in your secrets
-2. `pip install -r requirements.txt`
-3. `python main.py`
+The fastest way to get the bot running with zero infrastructure:
 
-See [INSTRUCTIONS.md](INSTRUCTIONS.md) for detailed setup and deployment guide.
+1. Fork this repo to your GitHub account
+2. Go to [vercel.com](https://vercel.com) and import the repo
+3. Add environment variables in Vercel dashboard:
+   - `BOT_TOKEN` - your Telegram bot token from [@BotFather](https://t.me/BotFather)
+   - `MONGO_URI` - your MongoDB connection string
+4. Deploy (Vercel auto-detects the config)
+5. Register the webhook: visit `https://your-project.vercel.app/api/set_webhook`
+6. Send `/start` to your bot in Telegram
+
+See [INSTRUCTIONS.md](INSTRUCTIONS.md) for the full walkthrough.
+
+## Run Locally (Polling Mode)
+
+```bash
+cp .env.example .env   # Fill in BOT_TOKEN and MONGO_URI
+pip install -r requirements.txt
+python main.py
+```
 
 ## Required Secrets
 
-| Variable | Description |
-|----------|-------------|
-| `BOT_TOKEN` | Telegram bot token from [@BotFather](https://t.me/BotFather) |
-| `MONGO_URI` | MongoDB connection string |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `BOT_TOKEN` | Yes | Telegram bot token from [@BotFather](https://t.me/BotFather) |
+| `MONGO_URI` | Yes | MongoDB connection string |
+| `WEBHOOK_URL` | No | Custom domain for Vercel (auto-detected if not set) |
 
 ## Commands
 
@@ -50,9 +66,16 @@ See [INSTRUCTIONS.md](INSTRUCTIONS.md) for detailed setup and deployment guide.
 | `/ban` | Ban user (admin) |
 | `/unban` | Unban user (admin) |
 
+## Architecture
+
+The bot supports two deployment modes:
+
+- **Vercel (webhook)** - Telegram pushes updates to `/api/webhook`. Serverless, zero infrastructure, always on. ConversationHandler state persisted to MongoDB.
+- **Local/VPS (polling)** - `main.py` polls Telegram for updates. Traditional long-running process.
+
 ## Tech Stack
 
-- Python 3.11+
+- Python 3.10+
 - python-telegram-bot v20+
 - MongoDB (motor async driver)
 - aiohttp
@@ -60,14 +83,20 @@ See [INSTRUCTIONS.md](INSTRUCTIONS.md) for detailed setup and deployment guide.
 ## Project Structure
 
 ```
-telegram-bot/
-  main.py               # Entry point
-  config/settings.py    # Env var loading
-  services/database.py  # MongoDB connection
-  services/api_client.py # External API helpers
-  commands/             # All command modules
-  helpers/              # Shared utilities
-  assets/               # Images
+├── main.py               # Polling mode entry point
+├── bot_app.py            # Shared Application builder (both modes)
+├── vercel.json           # Vercel deployment config
+├── api/
+│   ├── webhook.py        # Vercel webhook handler (serverless)
+│   └── set_webhook.py    # Webhook registration helper
+├── config/settings.py    # Env var loading + validation
+├── services/
+│   ├── database.py       # MongoDB connection
+│   ├── api_client.py     # External API helpers
+│   └── persistence.py    # MongoDB persistence for serverless
+├── commands/             # All command modules
+├── helpers/              # Shared utilities
+└── assets/               # Images
 ```
 
 ## License
