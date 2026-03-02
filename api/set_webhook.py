@@ -1,19 +1,19 @@
 """Vercel serverless function: One-time webhook registration.
 
 Hit GET /api/set_webhook after deploying to register the webhook URL
-with Telegram.  It reads the VERCEL_URL env var (auto-set by Vercel)
-and falls back to WEBHOOK_URL if you've set a custom domain.
+with Telegram.
 
 Usage after deploy:
     curl https://your-project.vercel.app/api/set_webhook
 """
 
-import sys
 import os
+import sys
 import json
 import asyncio
 import logging
-from http.server import BaseHTTPRequestHandler
+
+from flask import Flask, Response, request
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -26,12 +26,10 @@ logger = logging.getLogger(__name__)
 
 def _get_webhook_url():
     """Determine the public webhook URL."""
-    # Prefer an explicit WEBHOOK_URL (custom domain).
     explicit = os.getenv("WEBHOOK_URL")
     if explicit:
         return explicit.rstrip("/") + "/api/webhook"
 
-    # Vercel auto-sets VERCEL_URL (without protocol).
     vercel_url = os.getenv("VERCEL_URL")
     if vercel_url:
         return f"https://{vercel_url}/api/webhook"
@@ -63,7 +61,7 @@ async def _delete_webhook():
     bot = Bot(token=BOT_TOKEN)
     async with bot:
         await bot.delete_webhook()
-    return {"ok": True, "message": "Webhook deleted. Bot will no longer receive updates until re-registered."}
+    return {"ok": True, "message": "Webhook deleted."}
 
 
 async def _get_info():
@@ -78,33 +76,31 @@ async def _get_info():
     }
 
 
-class handler(BaseHTTPRequestHandler):
+app = Flask(__name__)
+
+
+@app.route("/api/set_webhook", methods=["GET"])
+def set_webhook():
     """
-    GET  /api/set_webhook            → register webhook
-    GET  /api/set_webhook?action=delete  → remove webhook
-    GET  /api/set_webhook?action=info    → show current webhook info
+    GET /api/set_webhook             -> register webhook
+    GET /api/set_webhook?action=delete   -> remove webhook
+    GET /api/set_webhook?action=info     -> show status
     """
+    action = request.args.get("action", "set")
 
-    def do_GET(self):
-        from urllib.parse import urlparse, parse_qs
-        qs = parse_qs(urlparse(self.path).query)
-        action = qs.get("action", ["set"])[0]
+    try:
+        if action == "delete":
+            result = asyncio.run(_delete_webhook())
+        elif action == "info":
+            result = asyncio.run(_get_info())
+        else:
+            result = asyncio.run(_set_webhook())
+    except Exception as e:
+        logger.exception("set_webhook error")
+        result = {"ok": False, "error": str(e)}
 
-        try:
-            if action == "delete":
-                result = asyncio.run(_delete_webhook())
-            elif action == "info":
-                result = asyncio.run(_get_info())
-            else:
-                result = asyncio.run(_set_webhook())
-        except Exception as e:
-            logger.exception("set_webhook error")
-            result = {"ok": False, "error": str(e)}
-
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        self.wfile.write(json.dumps(result, indent=2).encode())
-
-    def log_message(self, format, *args):
-        logger.info(format % args)
+    return Response(
+        json.dumps(result, indent=2),
+        status=200,
+        content_type="application/json",
+    )

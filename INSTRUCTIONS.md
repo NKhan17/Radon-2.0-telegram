@@ -123,7 +123,17 @@ Go to https://vercel.com and sign up with your GitHub account (free).
 1. In Vercel dashboard, click **"Add New..." -> "Project"**
 2. Select your forked repository
 3. Vercel will auto-detect the `vercel.json` configuration
-4. **Before clicking Deploy**, add your environment variables:
+4. **Before clicking Deploy**, add your environment variables (see next step)
+
+> **"Project already exists" error:** Vercel project names are **globally unique**
+> across all Vercel users. If the default name (e.g. `radon-2-0-telegram`) is
+> already taken by someone else, Vercel will show this error even though it's
+> your first time deploying. To fix this:
+>
+> - In the import screen, look for the **"Project Name"** field
+> - Change it to something unique, e.g. `radon-bot-yourname` or `radon-tg-12345`
+> - The project name only affects your Vercel dashboard URL — it does **not**
+>   affect bot functionality
 
 #### 4. Add Environment Variables
 
