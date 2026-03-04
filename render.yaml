@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: radon-2-telegram
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: MONGO_URI
+        sync: false
