@@ -13,21 +13,23 @@ A full-featured Telegram bot migrated from the [Radon 2.0 Discord bot](https://g
 - **Tags** - Per-chat tag system for saving and sharing content
 - **Workout Playlist** - Official hype playlist link
 
-## Deploy to Render (Recommended)
+## Deploy to Render (Free Tier)
+
+Render's **Web Service** (free tier) is used. `server.py` runs the polling bot in a background thread alongside a tiny HTTP health-check server — this satisfies Render's port-binding requirement for free web services.
 
 1. Fork this repo to your GitHub account
-2. Go to [render.com](https://render.com) → **New** → **Background Worker**
+2. Go to [render.com](https://render.com) → **New** → **Web Service**
 3. Connect your GitHub repo
 4. Set the following:
    - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `python main.py`
+   - **Start Command**: `python server.py`
 5. Add environment variables in the Render dashboard:
-   - `BOT_TOKEN` - your Telegram bot token from [@BotFather](https://t.me/BotFather)
-   - `MONGO_URI` - your MongoDB connection string (e.g. from [MongoDB Atlas](https://www.mongodb.com/atlas))
-6. Click **Create Background Worker** — check the logs for `Radon 2.0 Telegram Edition is online!`
+   - `BOT_TOKEN` — your Telegram bot token from [@BotFather](https://t.me/BotFather)
+   - `MONGO_URI` — your MongoDB connection string (e.g. from [MongoDB Atlas](https://www.mongodb.com/atlas))
+6. Click **Create Web Service** — check the logs for `Radon 2.0 Telegram Edition is online!`
 7. Send `/start` to your bot in Telegram to confirm it's live
 
-> **Note:** Render's free tier spins down Background Workers after inactivity. Upgrade to a paid instance type to keep it always-on.
+> **Free tier spin-down:** Render's free Web Services sleep after ~15 minutes of no HTTP traffic. To prevent this, add your Render URL to [UptimeRobot](https://uptimerobot.com) (free) with a 5-minute ping interval. This keeps the bot alive 24/7 at no cost.
 
 ## Run Locally (Polling Mode)
 
@@ -68,7 +70,11 @@ python main.py
 
 ## Architecture
 
-The bot runs in **polling mode** — `main.py` long-polls the Telegram API for updates every 0.5 seconds, giving near-instant response times. This is a traditional long-running process, ideal for Render Background Workers.
+The bot runs in **polling mode** via `server.py`:
+- A daemon thread runs `main.py`'s polling loop (0.5s interval) continuously
+- The main thread runs a lightweight `aiohttp` health-check server on `$PORT`
+- Render sees an active HTTP server and keeps the process alive on the free tier
+- UptimeRobot pings `/health` every 5 minutes to prevent free-tier spin-down
 
 ## Tech Stack
 
@@ -80,9 +86,10 @@ The bot runs in **polling mode** — `main.py` long-polls the Telegram API for u
 ## Project Structure
 
 ```
-├── main.py               # Entry point (polling mode, 0.5s interval)
+├── server.py             # Render entry point (bot thread + health-check server)
+├── main.py               # Local polling entry point
 ├── bot_app.py            # Shared Application builder
-├── Procfile              # Render / Heroku process declaration
+├── Procfile              # Render process declaration (web: python server.py)
 ├── Dockerfile            # Docker deployment config
 ├── config/settings.py    # Env var loading + validation
 ├── services/
