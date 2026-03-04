@@ -30,7 +30,7 @@ def main():
     app.post_init = post_init
 
     logger.info("Starting Radon 2.0 polling...")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    app.run_polling(allowed_updates=Update.ALL_TYPES, poll_interval=0.5)
 
 
 if __name__ == "__main__":

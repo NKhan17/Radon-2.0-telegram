@@ -13,20 +13,21 @@ A full-featured Telegram bot migrated from the [Radon 2.0 Discord bot](https://g
 - **Tags** - Per-chat tag system for saving and sharing content
 - **Workout Playlist** - Official hype playlist link
 
-## Deploy to Vercel (Recommended)
-
-The fastest way to get the bot running with zero infrastructure:
+## Deploy to Render (Recommended)
 
 1. Fork this repo to your GitHub account
-2. Go to [vercel.com](https://vercel.com) and import the repo
-3. Add environment variables in Vercel dashboard:
+2. Go to [render.com](https://render.com) → **New** → **Background Worker**
+3. Connect your GitHub repo
+4. Set the following:
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `python main.py`
+5. Add environment variables in the Render dashboard:
    - `BOT_TOKEN` - your Telegram bot token from [@BotFather](https://t.me/BotFather)
-   - `MONGO_URI` - your MongoDB connection string
-4. Deploy (Vercel auto-detects the config)
-5. Register the webhook: visit `https://your-project.vercel.app/api/set_webhook`
-6. Send `/start` to your bot in Telegram
+   - `MONGO_URI` - your MongoDB connection string (e.g. from [MongoDB Atlas](https://www.mongodb.com/atlas))
+6. Click **Create Background Worker** — check the logs for `Radon 2.0 Telegram Edition is online!`
+7. Send `/start` to your bot in Telegram to confirm it's live
 
-See [INSTRUCTIONS.md](INSTRUCTIONS.md) for the full walkthrough.
+> **Note:** Render's free tier spins down Background Workers after inactivity. Upgrade to a paid instance type to keep it always-on.
 
 ## Run Locally (Polling Mode)
 
@@ -36,13 +37,12 @@ pip install -r requirements.txt
 python main.py
 ```
 
-## Required Secrets
+## Required Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `BOT_TOKEN` | Yes | Telegram bot token from [@BotFather](https://t.me/BotFather) |
 | `MONGO_URI` | Yes | MongoDB connection string |
-| `WEBHOOK_URL` | No | Custom domain for Vercel (auto-detected if not set) |
 
 ## Commands
 
@@ -68,10 +68,7 @@ python main.py
 
 ## Architecture
 
-The bot supports two deployment modes:
-
-- **Vercel (webhook)** - Telegram pushes updates to `/api/webhook`. Serverless, zero infrastructure, always on. ConversationHandler state persisted to MongoDB.
-- **Local/VPS (polling)** - `main.py` polls Telegram for updates. Traditional long-running process.
+The bot runs in **polling mode** — `main.py` long-polls the Telegram API for updates every 0.5 seconds, giving near-instant response times. This is a traditional long-running process, ideal for Render Background Workers.
 
 ## Tech Stack
 
@@ -83,17 +80,15 @@ The bot supports two deployment modes:
 ## Project Structure
 
 ```
-├── main.py               # Polling mode entry point
-├── bot_app.py            # Shared Application builder (both modes)
-├── vercel.json           # Vercel deployment config
-├── api/
-│   ├── webhook.py        # Vercel webhook handler (serverless)
-│   └── set_webhook.py    # Webhook registration helper
+├── main.py               # Entry point (polling mode, 0.5s interval)
+├── bot_app.py            # Shared Application builder
+├── Procfile              # Render / Heroku process declaration
+├── Dockerfile            # Docker deployment config
 ├── config/settings.py    # Env var loading + validation
 ├── services/
 │   ├── database.py       # MongoDB connection
 │   ├── api_client.py     # External API helpers
-│   └── persistence.py    # MongoDB persistence for serverless
+│   └── persistence.py    # MongoDB persistence for ConversationHandlers
 ├── commands/             # All command modules
 ├── helpers/              # Shared utilities
 └── assets/               # Images
