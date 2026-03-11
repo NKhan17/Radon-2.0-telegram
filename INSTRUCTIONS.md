@@ -28,7 +28,6 @@ The bot includes:
 - Custom workout list management
 - A nutritional food database
 - Progress logging (flex log)
-- Fun commands (RPS, memes, 8-ball, dad jokes)
 - Group moderation tools (purge, kick, ban, unban)
 - A per-chat tag system
 - A workout playlist link
@@ -132,7 +131,7 @@ Go to https://vercel.com and sign up with your GitHub account (free).
 >
 > - In the import screen, look for the **"Project Name"** field
 > - Change it to something unique, e.g. `radon-bot-yourname` or `radon-tg-12345`
-> - The project name only affects your Vercel dashboard URL — it does **not**
+> - The project name only affects your Vercel dashboard URL ï¿½ it does **not**
 >   affect bot functionality
 
 #### 4. Add Environment Variables
@@ -394,7 +393,6 @@ Use Add to log a new achievement, Delete to remove entries, Clear All to reset.
 
 ```
 /rps          - Rock Paper Scissors
-/meme         - Random meme
 /eightball    - Magic 8-ball (add your question after the command)
 /dadjoke      - Dad joke
 /hype         - Workout playlist link

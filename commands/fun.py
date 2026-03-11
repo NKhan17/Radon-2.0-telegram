@@ -2,7 +2,7 @@ import random
 from html import escape
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from services.api_client import fetch_meme, fetch_dad_joke
+from services.api_client import fetch_dad_joke
 
 
 # --- Rock Paper Scissors ---
@@ -59,25 +59,6 @@ async def rps_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(text, parse_mode="HTML", reply_markup=None)
 
 
-# --- Meme ---
-
-async def meme(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Fetch and send a random meme."""
-    data = await fetch_meme()
-    if not data:
-        await update.message.reply_text("Failed to fetch meme. Try again later.")
-        return
-
-    caption = (
-        f"<b>{escape(data.get('title', 'Meme'))}</b>\n"
-        f"<i>From r/{escape(data.get('subreddit', 'unknown'))}</i>"
-    )
-
-    await update.message.reply_photo(
-        photo=data["url"],
-        caption=caption,
-        parse_mode="HTML",
-    )
 
 
 # --- 8-Ball ---
