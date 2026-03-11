@@ -8,7 +8,7 @@ A full-featured Telegram bot migrated from the [Radon 2.0 Discord bot](https://g
 - **Custom Workouts** - Create and manage your personal exercise list
 - **Nutrition Guide** - Browse 24 foods sorted by protein or calories
 - **Progress Tracking** - Log and view your fitness milestones
-- **Fun Commands** - Rock Paper Scissors, memes, 8-ball, dad jokes
+- **Fun Commands** - Rock Paper Scissors, 8-ball, dad jokes
 - **Moderation** - Purge, kick, ban, unban with admin checks
 - **Tags** - Per-chat tag system for saving and sharing content
 - **Workout Playlist** - Official hype playlist link
@@ -58,7 +58,6 @@ python main.py
 | `/diet` | Browse nutritional food guide |
 | `/flex` | View/edit progress log |
 | `/rps` | Rock Paper Scissors |
-| `/meme` | Random meme |
 | `/eightball` | Magic 8-ball |
 | `/dadjoke` | Dad joke |
 | `/hype` | Workout playlist |

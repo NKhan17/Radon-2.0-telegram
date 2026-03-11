@@ -31,7 +31,6 @@ BOT_COMMANDS = [
     BotCommand("diet", "Browse nutritional food guide"),
     BotCommand("flex", "View/edit your progress log"),
     BotCommand("rps", "Rock Paper Scissors"),
-    BotCommand("meme", "Get a random meme"),
     BotCommand("eightball", "Ask the magic 8-ball"),
     BotCommand("dadjoke", "Get a dad joke"),
     BotCommand("hype", "Official workout playlist"),
@@ -65,7 +64,6 @@ async def _help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/flex - View/edit your progress log\n\n"
         "<b>Fun</b>\n"
         "/rps - Rock Paper Scissors\n"
-        "/meme - Get a random meme\n"
         "/eightball - Ask the magic 8-ball\n"
         "/dadjoke - Get a dad joke\n"
         "/hype - Official workout playlist\n\n"
@@ -120,7 +118,6 @@ def build_application(use_persistence=False, use_updater=True):
     app.add_handler(CommandHandler("diet", diet.diet))
     app.add_handler(CommandHandler("flex", flex.flex))
     app.add_handler(CommandHandler("rps", fun.rps))
-    app.add_handler(CommandHandler("meme", fun.meme))
     app.add_handler(CommandHandler("eightball", fun.eightball))
     app.add_handler(CommandHandler("dadjoke", fun.dadjoke))
     app.add_handler(CommandHandler("hype", hype.hype))
